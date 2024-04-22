@@ -34,11 +34,7 @@ from transformers import (
 from datasets import load_dataset, Dataset
 import evaluate
 
-
 from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
-
-
-    
 
 if torch.cuda.is_available():   
     torch.backends.cuda.matmul.allow_tf32 = True
@@ -51,13 +47,13 @@ DEFAULT_PAD_TOKEN = "[PAD]"
 @dataclass
 class ModelArguments:
     model_name_or_path: Optional[str] = field(
-        default="EleutherAI/pythia-12b"
+        default="TinyLlama/TinyLlama-1.1B-intermediate-step-1431k-3T"
+        metadata={"help": "Choose Base Model."}        
     )
     trust_remote_code: Optional[bool] = field(
-        default=False,
+        default=True,
         metadata={"help": "Enable unpickling of arbitrary code in AutoModelForCausalLM#from_pretrained."}
     )
-
 
 @dataclass
 class DataArguments:
@@ -87,12 +83,12 @@ class DataArguments:
         metadata={"help": "Maximum target sequence length. Sequences will be right padded (and possibly truncated)."},
     )
     dataset: str = field(
-        default='alpaca',
+        default='bagel',
         metadata={"help": "Which dataset to finetune on. See datamodule for options."}
     )
     dataset_format: Optional[str] = field(
         default=None,
-        metadata={"help": "Which dataset format is used. [alpaca|chip2|self-instruct|hh-rlhf]"}
+        metadata={"help": "Which dataset format is used. [alpaca|chip2|self-instruct|hh-rlhf|bagel|mini-orca|rombo_hermes]"}
     )
 
 @dataclass
@@ -102,9 +98,6 @@ class TrainingArguments(transformers.Seq2SeqTrainingArguments):
         default=False,
         metadata={"help": "Whether to train on the input in addition to the target text."}
     )
-
-
-
 
     report_to: str = field(
         default='none',
@@ -162,13 +155,7 @@ class GenerationArguments:
     no_repeat_ngram_size: Optional[int] = field(default=0)
 
 
-
-
-
 def get_accelerate_model(args, checkpoint_dir):
-
-
-
 
     device_map = "auto"
 
@@ -177,16 +164,12 @@ def get_accelerate_model(args, checkpoint_dir):
         local_rank = int(os.environ.get('LOCAL_RANK', '0'))
         device_map = {'': local_rank}
 
-
     print(f'loading base model {args.model_name_or_path}...')
     model = AutoModelForCausalLM.from_pretrained(
         args.model_name_or_path,
         device_map=device_map,
         trust_remote_code=args.trust_remote_code,
     )
-
-
-
 
     # Tokenizer
     tokenizer = AutoTokenizer.from_pretrained(
@@ -338,9 +321,39 @@ def extract_alpaca_dataset(example):
         prompt_format = ALPACA_PROMPT_DICT["prompt_no_input"]
     return {'input': prompt_format.format(**example)}
 
+def format_dataset_conversation(dataset):
+    mapping = {"role": "from", "content": "value", "user": "human", "assistant": "gpt"}
+
+    def formatting_prompts_funct(examples):
+        convos = examples["conversations"]
+
+        def format_conversation(convo):
+            formatted_utterances = []
+            for utterance in convo:
+                formatted_utterance = {
+                    mapping[key]: value for key, value in utterance.items() if key in mapping
+                }
+                formatted_utterances.append(formatted_utterance)
+
+            # Your logic to create input and output strings from formatted_utterances
+            # Example: Concatenate utterances with separators
+            input_string = " ".join(u["value"] for u in formatted_utterances if u["from"] == "human")
+            output_string = " ".join(u["value"] for u in formatted_utterances if u["from"] == "gpt")
+
+            return input_string, output_string
+
+        texts = [format_conversation(convo) for convo in convos]
+        return {"text": texts}
+        
+    dataset = dataset.map(formatting_prompts_funct)
+
+    return dataset
+		 
 def local_dataset(dataset_name):
     if dataset_name.endswith('.json') or dataset_name.endswith('.jsonl'):
         full_dataset = Dataset.from_json(path_or_paths=dataset_name)
+    elif dataset_name.endswith('.parquet'):
+    	full_dataset = Dataset.from_parquet(path_or_paths=dataset_name)    
     elif dataset_name.endswith('.csv'):
         full_dataset = Dataset.from_pandas(pd.read_csv(dataset_name))
     elif dataset_name.endswith('.tsv'):
@@ -348,7 +361,7 @@ def local_dataset(dataset_name):
     else:
         raise ValueError(f"Unsupported dataset format: {dataset_name}")
 
-    split_dataset = full_dataset.train_test_split(test_size=0.1)
+    split_dataset = full_dataset.train_test_split(test_size=0.2)
     return split_dataset
 
 def make_data_module(tokenizer: transformers.PreTrainedTokenizer, args) -> Dict:
@@ -386,6 +399,22 @@ def make_data_module(tokenizer: transformers.PreTrainedTokenizer, args) -> Dict:
             return load_dataset("Anthropic/hh-rlhf")
         elif dataset_name == 'longform':
             return load_dataset("akoksal/LongForm")
+        elif dataset_name == 'miniorca_uncencored':          
+            return load_dataset("Vezora/Mini_Orca_Uncencored_Alpaca")
+        elif dataset_name == 'miniorcacode_uncencored':
+            return load_dataset("Vezora/Mini_Orca_Code_Uncencored_alpaca_Format")
+        elif dataset_name == 'wizard_math':
+            return load_dataset("Vezora/Wizard_Math_Alpaca")
+        elif dataset_name == 'vezora_python':
+            return load_dataset("Vezora/Tested-22k-Python-Alpaca")
+        elif dataset_name == 'dolphin_gpt4':
+            return load_dataset("Vezora/Dolphin1m_gpt4_Alpaca_format")
+        elif dataset_name == 'bagel':
+            return load_dataset("jondurbin/bagel-v0.5", data_files='bagel-input-output-v0.5.parquet')
+        elif dataset_name == 'puffin':
+            return load_dataset("Vezora/Puffin-Alpaca")
+        elif dataset_name == 'rombo_hermes':
+            return load_dataset("Replete-AI/Rombo-Hermes-2.5-Extra-code")
         elif dataset_name == 'oasst1':
             return load_dataset("timdettmers/openassistant-guanaco")
         elif dataset_name == "OpenAssistant/oasst_top1_2023-08-25":
@@ -427,6 +456,10 @@ def make_data_module(tokenizer: transformers.PreTrainedTokenizer, args) -> Dict:
                 'input': '',
                 'output': x['text'],
             })
+        elif dataset_format == 'conversation':
+            #Use Conversation style chat for instruction and response SHAREGPT
+            formatted_dataset = format_dataset_conversation(dataset)
+            dataset = formatted_dataset        
         elif dataset_format == 'input-output':
             # leave as is
             pass
@@ -519,12 +552,6 @@ def train():
         args=training_args,
         **{k:v for k,v in data_module.items() if k != 'predict_dataset'},
     )
-
-
-   
-        
-
-        
 
     # Verifying the datatypes and parameter counts before training.
     print_trainable_parameters(args, model)
