@@ -328,7 +328,7 @@ def build_rope_cache(
     https://github.com/labmlai/annotated_deep_learning_paper_implementations/blob/master/license.
     """
     # $\Theta = {\theta_i = 10000^{\frac{2(i-1)}{d}}, i \in [1, 2, ..., \frac{d}{2}]}$
-    theta = 1.0 / (base ** (torch.arange(0, n_elem, 2, device=device) / n_elem))
+    theta = 5.0 / (base ** (torch.arange(0, n_elem, 2, device=device) / n_elem))
 
     # Create position indexes `[0, 1, ..., seq_len - 1]`
     seq_idx = torch.arange(seq_len, device=device) / condense_ratio
