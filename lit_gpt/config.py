@@ -912,7 +912,36 @@ for c in llama_2:
         copy["name"] = c["name"].format(kind)
         configs.append(copy)
 
-
+###############
+# Meta LLaMA 3
+###############
+llama_3 = [
+    # https://huggingface.co/meta-llama/Meta-Llama-3-8B/blob/main/config.json
+    dict(
+        org="meta-llama",
+        name="Meta-Llama-3-8B",
+        block_size=4096,
+        vocab_size=128256,
+        padding_multiple=64,
+        n_layer=32,
+        n_head=32,
+        n_embd=8192,
+        n_query_groups=8,
+        rotary_percentage=1.0,
+        parallel_residual=False,
+        bias=False,
+        _norm_class="RMSNorm",
+        norm_eps=1e-5,
+        _mlp_class="LLaMAMLP",
+        intermediate_size=14336,
+    ),
+]
+for c in llama_3:
+    for kind in ("", "-chat"):
+        copy = c.copy()
+        copy["name"] = c["name"].format(kind)
+        configs.append(copy)
+        
 ##########################
 # Stability AI FreeWilly2
 ##########################
