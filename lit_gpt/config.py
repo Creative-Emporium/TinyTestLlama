@@ -968,5 +968,34 @@ freewilly_2 = [
 ]
 configs.extend(freewilly_2)
 
+#############################
+# TinyLlama3--Test
+#############################
+TinyLLama_3 = [
+     
+    # Test Case for new Tinyllama_3 implementation not yet correct but a placeholder
+    dict(
+        org="creative_EE",
+        name="TinyLlama3",
+        block_size=4096,
+        vocab_size=128256,
+        padding_multiple=64,
+        n_layer=22,
+        n_head=32,
+        n_embd=2048,
+        rotary_percentage=1.0,
+        parallel_residual=False,
+        bias=False,
+        ffn_dim_multiplier=1.3,
+        rope_theta=500000,
+        _norm_class="FusedRMSNorm",
+        norm_eps=1e-5,
+        _mlp_class="LLaMAMLP",
+        intermediate_size=5632,
+        n_query_groups=4,
+        condense_ratio=4        
+    ),
+]
+configs.extend(TinyLLama_3)
 
 name_to_config = {config["name"]: config for config in configs}
