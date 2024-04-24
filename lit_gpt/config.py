@@ -1310,13 +1310,14 @@ TinyLLama_3 = [
         parallel_residual=False,
         bias=False,
         ffn_dim_multiplier=1.3,
-        rope_theta=500000,
         _norm_class="FusedRMSNorm",
         norm_eps=1e-5,
         _mlp_class="LLaMAMLP",
         intermediate_size=5632,
         n_query_groups=4,
-        condense_ratio=4        
+        condense_ratio=4,
+        rope_base=50000,        
+        rope_condense_ratio=4,        
     ),
 ]
 configs.extend(TinyLLama_3)
