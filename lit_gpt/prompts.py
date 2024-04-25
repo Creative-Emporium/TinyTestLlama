@@ -8,11 +8,10 @@ from typing import TYPE_CHECKING, Dict, List, Tuple, Type, Union
 
 import yaml
 
-from lit_gpt.config import Config
+from litgpt.config import Config
 
 if TYPE_CHECKING:
-    from lit_gpt import Tokenizer
-
+    from litgpt import Tokenizer
 
 class PromptStyle:
     """Base interface for prompt styles."""
@@ -32,14 +31,12 @@ class PromptStyle:
     def from_config(cls, config: Config) -> "PromptStyle":
         return model_name_to_prompt_style(config.name)
 
-
 class Default(PromptStyle):
     def apply(self, prompt: str, **kwargs: str) -> str:
         return prompt
 
     def stop_tokens(self, tokenizer: "Tokenizer") -> Tuple[List[int], ...]:
         return ([tokenizer.eos_id],)
-
 
 class Alpaca(PromptStyle):
     def apply(self, prompt: str, **kwargs: str) -> str:
@@ -55,7 +52,6 @@ class Alpaca(PromptStyle):
             f"### Instruction:\n{prompt}\n\n### Response:\n"
         )
 
-
 class FLAN(PromptStyle):
     def apply(self, prompt: str, **kwargs: str) -> str:
         return (
@@ -64,7 +60,6 @@ class FLAN(PromptStyle):
             f"### Instruction:\n{prompt}\n\n### Response:\n"
         )
 
-
 class Longform(PromptStyle):
     def apply(self, prompt: str, **kwargs: str) -> str:
         return (
@@ -72,7 +67,6 @@ class Longform(PromptStyle):
             "Write a response that appropriately completes the request.\n\n"
             f"### Instruction:\n{prompt}\n\n### Response:\n"
         )
-
 
 class StableLMAlpha(PromptStyle):
     def apply(self, prompt: str, **kwargs: str) -> str:
@@ -92,11 +86,9 @@ class StableLMAlpha(PromptStyle):
             [tokenizer.token_to_id("<|USER|>")],
         )
 
-
 class StableLMZephyr(PromptStyle):
     def apply(self, prompt: str, **kwargs: str) -> str:
         return f"<|user|>\n{prompt}<|endoftext|>\n<|assistant|>\n"
-
 
 class TogetherComputerChat(PromptStyle):
     def apply(self, prompt: str, **kwargs: str) -> str:
@@ -110,7 +102,6 @@ class TogetherComputerChat(PromptStyle):
             [lt, tokenizer.token_to_id("human"), gt],
             [lt, tokenizer.token_to_id("bot"), gt],
         )
-
 
 class TogetherComputerInstruct(PromptStyle):
     def apply(self, prompt: str, **kwargs: str) -> str:
@@ -130,7 +121,6 @@ class TogetherComputerInstruct(PromptStyle):
             [2756],  # '\n\n\n'
         )
 
-
 class Falcon(PromptStyle):
     def apply(self, prompt: str, **kwargs: str) -> str:
         # First line could be modified. AFAIK Falcon doesn't impose a specific system prompt
@@ -147,7 +137,6 @@ class Falcon(PromptStyle):
             [193, tokenizer.token_to_id("User")],  # 193: '\n'
         )
 
-
 class Vicuna(PromptStyle):
     def apply(self, prompt: str, **kwargs: str) -> str:
         # https://github.com/lm-sys/FastChat/blob/main/docs/vicuna_weights_version.md#prompt-template
@@ -155,7 +144,6 @@ class Vicuna(PromptStyle):
             "A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, "
             f"detailed, and polite answers to the user's questions. USER: {prompt} ASSISTANT:"
         )
-
 
 class Llama2FunctionCalling(PromptStyle):
     def apply(self, prompt: str, **kwargs: str) -> str:
@@ -185,7 +173,6 @@ class Llama2FunctionCalling(PromptStyle):
             f"{e_sys}{prompt}{e_inst}\n\n"
         )
 
-
 class Llama2(PromptStyle):
     def apply(self, prompt: str, **kwargs: str) -> str:
         b_inst, e_inst = "[INST]", "[/INST]"
@@ -199,6 +186,22 @@ class Llama2(PromptStyle):
             f" share false information.{e_sys} {prompt} {e_inst} "
         )
 
+class Llama3(PromptStyle):
+    def apply(self, prompt: str, **kwargs: str) -> str:
+        # https://github.com/meta-llama/llama3/blob/359887376f0aaf30e433f23e25df858d8c2a9833/llama/tokenizer.py#L202-L229
+        return (
+            "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n"
+            "You are a helpful assistant.<|eot_id|>\n"  # The system prompt is optional
+            "<|start_header_id|>user<|end_header_id|>\n\n"
+            f"{prompt}<|eot_id|>\n"
+            "<|start_header_id|>assistant<|end_header_id|>\n\n"
+        )
+
+    def stop_tokens(self, tokenizer: "Tokenizer") -> Tuple[List[int], ...]:
+        return (
+            [tokenizer.eos_id],
+            [tokenizer.token_to_id("<|eot_id|>")],
+        )
 
 class FreeWilly2(PromptStyle):
     def apply(self, prompt: str, **kwargs: str) -> str:
@@ -209,21 +212,17 @@ class FreeWilly2(PromptStyle):
             "### Assistant:\n"
         )
 
-
 class Platypus(PromptStyle):
     def apply(self, prompt: str, **kwargs: str) -> str:
         return f"### Instruction:\n\n{prompt}\n\n### Response:\n"
-
 
 class NousResearch(PromptStyle):
     def apply(self, prompt: str, **kwargs: str) -> str:
         return f"### Instruction:\n{prompt}\n\n### Response:\n"
 
-
 class StableCode(PromptStyle):
     def apply(self, prompt: str, **kwargs: str) -> str:
         return f"###Instruction\n{prompt}###Response\n"
-
 
 class CodeLlama(PromptStyle):
     def apply(self, prompt: str, **kwargs: str) -> str:
@@ -232,7 +231,6 @@ class CodeLlama(PromptStyle):
         # Mistral does not: https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.1#instruction-format
         b_inst, e_inst = "<s>[INST]", "[/INST]"
         return f"{b_inst} {prompt} {e_inst}"
-
 
 class Phi1(PromptStyle):
     def apply(self, prompt: str, **kwargs: str) -> str:
@@ -248,11 +246,9 @@ class Phi1(PromptStyle):
             # [198, 198],  # '\n', '\n'
         )
 
-
 class Phi2(PromptStyle):
     def apply(self, prompt: str, **kwargs: str) -> str:
-        return f"Instruct:{prompt}\nOutput:"
-
+        return f"Instruct: {prompt}\nOutput:"
 
 class TinyLlama(PromptStyle):
     def apply(self, prompt: str, **kwargs: str) -> str:
@@ -264,11 +260,25 @@ class TinyLlama(PromptStyle):
             "<|assistant|>\n"
         )
 
+class TinyTestLlama(PromptStyle):
+    def apply(self, prompt: str, **kwargs: str) -> str:
+        return (
+            "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n"
+            "You are an AI assistant who provides detailed answers so user does not need to search outside to understand the answer. User will you give you a task. Your goal is to complete the task as faithfully as you can. While performing the task think step-by-step and justify your steps.<|eot_id|>\n"  # The system prompt is optional
+            "<|start_header_id|>user<|end_header_id|>\n\n"
+            f"{prompt}<|eot_id|>\n"
+            "<|start_header_id|>assistant<|end_header_id|>\n\n"
+        )
+
+    def stop_tokens(self, tokenizer: "Tokenizer") -> Tuple[List[int], ...]:
+        return (
+            [tokenizer.eos_id],
+            [tokenizer.token_to_id("<|eot_id|>")],
+        )
 
 class Gemma(PromptStyle):
     def apply(self, prompt: str, **kwargs: str) -> str:
         return f"<start_of_turn>user\n{prompt}<end_of_turn>\n<start_of_turn>model\n"
-
 
 # Maps prompt style names to PromptStyle classes
 prompt_styles: Dict[str, Type[PromptStyle]] = {
@@ -285,6 +295,7 @@ prompt_styles: Dict[str, Type[PromptStyle]] = {
     "vicuna": Vicuna,
     "llama2-function-calling": Llama2FunctionCalling,
     "llama2": Llama2,
+    "llama3": Llama3,
     "freewilly2": FreeWilly2,
     "platypus": Platypus,
     "nous-research": NousResearch,
@@ -293,9 +304,9 @@ prompt_styles: Dict[str, Type[PromptStyle]] = {
     "phi-1": Phi1,
     "phi-2": Phi2,
     "tinyllama": TinyLlama,
+    "tinytestllama": TinyTestLlama,    
     "gemma": Gemma,
 }
-
 
 def model_name_to_prompt_style(model_name: str) -> PromptStyle:
     if re.search(r"stablelm-tuned-alpha", model_name):
@@ -316,6 +327,8 @@ def model_name_to_prompt_style(model_name: str) -> PromptStyle:
         return Llama2FunctionCalling()
     if re.search("Llama-2.*-chat", model_name):
         return Llama2()
+    if re.search("Llama-3.*-Instruct", model_name):
+        return Llama3()
     if re.search("FreeWilly2", model_name):
         return FreeWilly2()
     if re.search("Platypus", model_name):
@@ -330,29 +343,28 @@ def model_name_to_prompt_style(model_name: str) -> PromptStyle:
         return Phi2()
     if re.search(r"tiny-llama.*chat", model_name):
         return TinyLlama()
-    if re.search(r"Gemma.*-it", model_name):
+    if re.search(r"tinytestllama.*chat", model_name):
+        return TinyTestLlama()        
+    if re.search(r"(Code)?Gemma.*-it", model_name):
         return Gemma()
     return Default()
-
 
 def save_prompt_style(style: Union[str, PromptStyle], checkpoint_dir: Path) -> None:
     style = PromptStyle.from_name(style) if isinstance(style, str) else style
     cls = type(style)
     # Allow saving the full module path for user-defined prompt classes
     config = {"class_path": f"{cls.__module__}.{cls.__name__}"}
-    with open(checkpoint_dir / "prompt_style.yaml", "w") as file:
+    with open(checkpoint_dir / "prompt_style.yaml", "w", encoding="utf-8") as file:
         yaml.dump(config, file)
 
-
 def load_prompt_style(checkpoint_dir: Path) -> PromptStyle:
-    with open(checkpoint_dir / "prompt_style.yaml", "r") as file:
+    with open(checkpoint_dir / "prompt_style.yaml", "r", encoding="utf-8") as file:
         config = yaml.safe_load(file)
     # Support loading the full module path for user-defined prompt classes
     full_module_path, cls_name = config["class_path"].rsplit(".", 1)
     module = importlib.import_module(full_module_path)
     cls = getattr(module, cls_name)
     return cls()
-
 
 def has_prompt_style(checkpoint_dir: Path) -> bool:
     return (checkpoint_dir / "prompt_style.yaml").is_file()
