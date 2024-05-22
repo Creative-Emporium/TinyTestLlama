@@ -1400,8 +1400,9 @@ TinyLLama_3 = [
     dict(
         org="creative_EE",
         name="TinyLlama3",
-        block_size=4096,
-        vocab_size=128256,
+        block_size=2048,
+        vocab_size=128000,
+        padded_vocab_size=128256,
         padding_multiple=64,
         n_layer=22,
         n_head=32,
